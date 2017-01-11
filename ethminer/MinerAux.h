@@ -19,7 +19,7 @@
 /** @file MinerAux.cpp
  * @author Russel Dirks
  * @date 2016
- * CLI module for mining.
+ * CLI (sucks) module for mining.
  */
 
 #include <thread>
