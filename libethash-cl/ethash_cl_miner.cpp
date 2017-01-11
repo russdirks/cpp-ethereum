@@ -40,6 +40,8 @@
 #include "ethash_cl_miner.h"
 #include "ethash_cl_miner_kernel.h"
 
+#include <boost/filesystem.hpp>
+
 #define ETHASH_BYTES 32
 
 #define OPENCL_PLATFORM_UNKNOWN 0
@@ -325,6 +327,33 @@ void ethash_cl_miner::finish()
 		m_queue.finish();
 }
 
+void ethash_cl_miner::exportDAG(uint64_t nodeCount)
+{
+	const unsigned NODES = 1000;
+	const unsigned BUFFSIZE = NODES * 64;
+	char buffer[BUFFSIZE];
+	FILE *f = NULL;
+	// I just hard coded something simple here.
+	char filename[] = "c:\\_temp\\dag_Genoil.dat";
+
+	if (boost::filesystem::exists(filename))
+		return;
+
+	std::cout << "Exporting dag ..." << std::endl;
+	f = fopen(filename, "wb");
+	uint64_t const magic_num = ETHASH_DAG_MAGIC_NUM;
+	fwrite(&magic_num, ETHASH_DAG_MAGIC_NUM_SIZE, 1, f);
+
+	int nodesLeft = nodeCount;
+	for (unsigned i = 0; nodesLeft > 0; i++)
+	{
+		unsigned getNodes = min((unsigned) nodesLeft, NODES);
+		m_queue.enqueueReadBuffer(m_dag, CL_TRUE, i * BUFFSIZE, getNodes * 64, buffer);
+		fwrite(buffer, getNodes * 64, 1, f);
+		nodesLeft -= NODES;
+	}
+	fclose(f);
+}
 
 bool ethash_cl_miner::init(
 	ethash_light_t _light, 
@@ -488,6 +517,8 @@ bool ethash_cl_miner::init(
 			m_queue.finish();
 			printf("OPENCL#%d: %.0f%%\n", _deviceId, 100.0f * (float)i / (float)fullRuns);
 		}
+
+		exportDAG(dagSize / sizeof(node));
 
 	}
 	catch (cl::Error const& err)
