@@ -17,9 +17,9 @@
 	along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
 */
 /** @file MinerAux.cpp
- * @author Gav Wood <i@gavwood.com>
- * @date 2014
- * CLI module for mining.
+ * @author Russel Dirks
+ * @date 2016
+ * CLI (sucks) module for mining.
  */
 
 #include <thread>
