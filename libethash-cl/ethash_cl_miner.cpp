@@ -473,20 +473,19 @@ bool ethash_cl_miner::init(
 		uint32_t const work = (uint32_t)(dagSize / sizeof(node));
 		//while (work < blocks * threads) blocks /= 2;
 
-		uint32_t fullRuns = work / m_globalWorkSize;
-		uint32_t const restWork = work % m_globalWorkSize;
-		if (restWork > 0) fullRuns++;
-
 		m_dagKernel.setArg(1, m_light);
 		m_dagKernel.setArg(2, m_dag);
 		m_dagKernel.setArg(3, ~0u);
 
-		for (uint32_t i = 0; i < fullRuns; i++)
+		int nodesLeft = work;
+		for (uint32_t i = 0; nodesLeft > 0; i++)
 		{
 			m_dagKernel.setArg(0, i * m_globalWorkSize);
-			m_queue.enqueueNDRangeKernel(m_dagKernel, cl::NullRange, m_globalWorkSize, s_workgroupSize);
+			unsigned c = min((unsigned) nodesLeft, m_globalWorkSize);
+			m_queue.enqueueNDRangeKernel(m_dagKernel, cl::NullRange, c, s_workgroupSize);
 			m_queue.finish();
-			printf("OPENCL#%d: %.0f%%\n", _deviceId, 100.0f * (float)i / (float)fullRuns);
+			printf("OPENCL#%d: %.0f%%\n", _deviceId, 100.0f - 100.0f * (float) nodesLeft / (float) work);
+			nodesLeft -= m_globalWorkSize;
 		}
 
 	}
