@@ -149,7 +149,7 @@ void EthashGPUMiner::workLoop()
 				}
 			}
 
-			cnote << "Initialising miner...";
+			cnote << "Initialising miner for " << w.seedHash.hex().substr(0, 8);
 			m_minerSeed = w.seedHash;
 
 			delete m_miner;

@@ -473,6 +473,10 @@ public:
 				BOOST_THROW_EXCEPTION(BadArgument());
 			}
 		}
+		else if (arg == "--new-dag-algo")
+		{
+			ethash_cl_miner::newDagAlgo = true;
+		}
 		else
 			return false;
 		return true;

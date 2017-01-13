@@ -67,6 +67,8 @@ public:
 	/// Default value of the global work size as a multiplier of the local work size
 	static unsigned const c_defaultGlobalWorkSizeMultiplier;
 
+	static bool newDagAlgo;
+
 private:
 
 	static std::vector<cl::Device> getDevices(std::vector<cl::Platform> const& _platforms, unsigned _platformId);

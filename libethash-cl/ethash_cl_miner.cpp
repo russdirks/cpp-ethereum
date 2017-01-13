@@ -40,8 +40,6 @@
 #include "ethash_cl_miner.h"
 #include "ethash_cl_miner_kernel.h"
 
-#include <boost/filesystem.hpp>
-
 #define ETHASH_BYTES 32
 
 #define OPENCL_PLATFORM_UNKNOWN 0
@@ -70,6 +68,7 @@ using namespace std;
 
 unsigned const ethash_cl_miner::c_defaultLocalWorkSize = 64;
 unsigned const ethash_cl_miner::c_defaultGlobalWorkSizeMultiplier = 4096; // * CL_DEFAULT_LOCAL_WORK_SIZE
+bool ethash_cl_miner::newDagAlgo = false;
 
 // TODO: If at any point we can use libdevcore in here then we should switch to using a LogChannel
 #if defined(_WIN32)
@@ -333,11 +332,7 @@ void ethash_cl_miner::exportDAG(uint64_t nodeCount)
 	const unsigned BUFFSIZE = NODES * 64;
 	char buffer[BUFFSIZE];
 	FILE *f = NULL;
-	// I just hard coded something simple here.
-	char filename[] = "c:\\_temp\\dag_Genoil.dat";
-
-	if (boost::filesystem::exists(filename))
-		return;
+	char filename[] = "./dag_Genoil.dat";
 
 	std::cout << "Exporting dag ..." << std::endl;
 	f = fopen(filename, "wb");
@@ -500,22 +495,37 @@ bool ethash_cl_miner::init(
 		ETHCL_LOG("Generating DAG data");
 
 		uint32_t const work = (uint32_t)(dagSize / sizeof(node));
-		//while (work < blocks * threads) blocks /= 2;
-
-		uint32_t fullRuns = work / m_globalWorkSize;
-		uint32_t const restWork = work % m_globalWorkSize;
-		if (restWork > 0) fullRuns++;
 
 		m_dagKernel.setArg(1, m_light);
 		m_dagKernel.setArg(2, m_dag);
 		m_dagKernel.setArg(3, ~0u);
 
-		for (uint32_t i = 0; i < fullRuns; i++)
+		if (ethash_cl_miner::newDagAlgo)
 		{
-			m_dagKernel.setArg(0, i * m_globalWorkSize);
-			m_queue.enqueueNDRangeKernel(m_dagKernel, cl::NullRange, m_globalWorkSize, s_workgroupSize);
-			m_queue.finish();
-			printf("OPENCL#%d: %.0f%%\n", _deviceId, 100.0f * (float)i / (float)fullRuns);
+			int nodesLeft = work;
+			for (uint32_t i = 0; nodesLeft > 0; i++)
+			{
+				m_dagKernel.setArg(0, i * m_globalWorkSize);
+				unsigned c = min((unsigned) nodesLeft, m_globalWorkSize);
+				m_queue.enqueueNDRangeKernel(m_dagKernel, cl::NullRange, c, s_workgroupSize);
+				m_queue.finish();
+				printf("OPENCL#%d: %.0f%%\n", _deviceId, 100.0f - 100.0f * (float) nodesLeft / (float) work);
+				nodesLeft -= m_globalWorkSize;
+			}
+		}
+		else
+		{
+			uint32_t fullRuns = work / m_globalWorkSize;
+			uint32_t const restWork = work % m_globalWorkSize;
+			if (restWork > 0) fullRuns++;
+
+			for (uint32_t i = 0; i < fullRuns; i++)
+			{
+				m_dagKernel.setArg(0, i * m_globalWorkSize);
+				m_queue.enqueueNDRangeKernel(m_dagKernel, cl::NullRange, m_globalWorkSize, s_workgroupSize);
+				m_queue.finish();
+				printf("OPENCL#%d: %.0f%%\n", _deviceId, 100.0f * (float) i / (float) fullRuns);
+			}
 		}
 
 		exportDAG(dagSize / sizeof(node));
