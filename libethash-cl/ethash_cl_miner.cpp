@@ -348,6 +348,7 @@ void ethash_cl_miner::exportDAG(uint64_t nodeCount)
 		nodesLeft -= NODES;
 	}
 	fclose(f);
+	std::cout << "*** DAG EXPORT COMPLETE ***" << std::endl;
 }
 
 bool ethash_cl_miner::init(
